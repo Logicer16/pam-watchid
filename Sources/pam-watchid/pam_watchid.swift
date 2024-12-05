@@ -80,7 +80,7 @@ private func parseArguments(argc: Int, argv: vchar) -> [String: String] {
 
 private extension LAPolicy {
     static var deviceOwnerAuthenticationIgnoringUserID: LAPolicy {
-#if SEQUOIASDK
+#if compiler(>=6.0)
         if #available(macOS 15, *) {
             return .deviceOwnerAuthenticationWithBiometricsOrCompanion
         } else {

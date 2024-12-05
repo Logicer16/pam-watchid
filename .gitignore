@@ -4,3 +4,4 @@
 *.swp
 *.swo
 ._*
+/.build
