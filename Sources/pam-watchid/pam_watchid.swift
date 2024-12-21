@@ -80,7 +80,7 @@ private func parseArguments(argc: Int, argv: vchar) -> [String: String] {
 
 private extension LAPolicy {
     static var deviceOwnerAuthenticationIgnoringUserID: LAPolicy {
-#if compiler(>=6.0)
+#if canImport(CoreHID) // Check for the 15.0 SDK
         if #available(macOS 15, *) {
             return .deviceOwnerAuthenticationWithBiometricsOrCompanion
         } else {
