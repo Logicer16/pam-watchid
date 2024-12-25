@@ -2,25 +2,24 @@ VERSION = $(shell cat VERSION)
 LIBRARY_PREFIX = pam_watchid
 LIBRARY_NAME = $(LIBRARY_PREFIX).so
 DESTINATION = /usr/local/lib/pam
-TARGET = apple-darwin$(shell uname -r)
+TARGET = apple-macosx10.15
 PAM_FILE_BASE = /etc/pam.d/sudo
 PAM_TEXT = auth sufficient $(LIBRARY_NAME)
 PAM_TID_TEXT = auth       sufficient     pam_tid.so
 
-# Determine if the macOS Sequoia SDK or later is available.
-DEFINES =
-# Due to the different ways in which the CLT and Xcode structure their SDK paths, one of the following will always be an empty string depending on what is configured by xcode-select. 
-CLT_SDK_MAJOR_VER = $(shell xcrun --sdk macosx --show-sdk-path | xargs readlink -f | xargs basename | sed 's/MacOSX//' | cut -d. -f1)
-XCODE_SDK_MAJOR_VER = $(shell xcrun --sdk macosx --show-sdk-path | xargs basename | sed 's/MacOSX//' | cut -d. -f1)
-SDK_REQUIRED_MAJOR_VER = 15
-ifeq "$(SDK_REQUIRED_MAJOR_VER)" "$(word 1, $(sort $(SDK_REQUIRED_MAJOR_VER) $(XCODE_SDK_MAJOR_VER) $(CLT_SDK_MAJOR_VER)))"
-	DEFINES += -DSEQUOIASDK
-endif
-
 all:
-	swiftc watchid-pam-extension.swift $(DEFINES) -o $(LIBRARY_PREFIX)_x86_64.so -target x86_64-$(TARGET) -emit-library
-	swiftc watchid-pam-extension.swift $(DEFINES) -o $(LIBRARY_PREFIX)_arm64.so -target arm64-$(TARGET) -emit-library
+ifeq ($(shell [[ '$(shell xcode-select -p)' == '/Library/Developer/CommandLineTools' ]] && echo true),true)
+# Legacy build
+# For CLT due to poor support for building swift packages.
+# Swift packages do work in macOS Sonoma and later with the CLT, but are an order of magnitude slower than Xcode. 
+	swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_x86_64.so -target x86_64-$(TARGET) -emit-library
+	swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_arm64.so -target arm64-$(TARGET) -emit-library
 	lipo -create $(LIBRARY_PREFIX)_arm64.so $(LIBRARY_PREFIX)_x86_64.so -output $(LIBRARY_NAME)
+else
+# Swift Package Manager build
+	swift build -c release --arch x86_64 --arch arm64
+	mv .build/apple/Products/Release/libpam-watchid.dylib $(LIBRARY_NAME)
+endif
 
 install: all
 	sudo mkdir -p $(DESTINATION)
