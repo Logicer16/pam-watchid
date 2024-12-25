@@ -8,18 +8,18 @@ PAM_TEXT = auth sufficient $(LIBRARY_NAME)
 PAM_TID_TEXT = auth       sufficient     pam_tid.so
 
 all:
-	ifeq ($(shell [[ '$(shell xcode-select -p)' == '/Library/Developer/CommandLineTools' ]] && echo true),true)
-	# Legacy build
-	# For CLT due to poor support for building swift packages.
-	# Swift packages do work in macOS Sonoma and later with the CLT, but are an order of magnitude slower than Xcode. 
-		swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_x86_64.so -target x86_64-$(TARGET) -emit-library
-		swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_arm64.so -target arm64-$(TARGET) -emit-library
-		lipo -create $(LIBRARY_PREFIX)_arm64.so $(LIBRARY_PREFIX)_x86_64.so -output $(LIBRARY_NAME)
-	else
-	# Swift Package Manager build
-		swift build -c release --arch x86_64 --arch arm64
-		mv .build/apple/Products/Release/libpam-watchid.dylib $(LIBRARY_NAME)
-	endif
+ifeq ($(shell [[ '$(shell xcode-select -p)' == '/Library/Developer/CommandLineTools' ]] && echo true),true)
+# Legacy build
+# For CLT due to poor support for building swift packages.
+# Swift packages do work in macOS Sonoma and later with the CLT, but are an order of magnitude slower than Xcode. 
+	swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_x86_64.so -target x86_64-$(TARGET) -emit-library
+	swiftc Sources/pam-watchid/pam_watchid.swift -o $(LIBRARY_PREFIX)_arm64.so -target arm64-$(TARGET) -emit-library
+	lipo -create $(LIBRARY_PREFIX)_arm64.so $(LIBRARY_PREFIX)_x86_64.so -output $(LIBRARY_NAME)
+else
+# Swift Package Manager build
+	swift build -c release --arch x86_64 --arch arm64
+	mv .build/apple/Products/Release/libpam-watchid.dylib $(LIBRARY_NAME)
+endif
 
 install: all
 	sudo mkdir -p $(DESTINATION)
